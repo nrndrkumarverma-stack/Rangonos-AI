@@ -1,0 +1,285 @@
+@if (!authService.currentUser()) {
+  <app-auth></app-auth>
+} @else {
+  <div class="flex h-screen w-full overflow-hidden bg-zinc-950 text-zinc-200 selection:bg-indigo-500/30">
+    
+    <!-- Sidebar (Desktop) -->
+    <aside class="hidden md:flex w-72 flex-col glass-panel border-r border-white/5 z-20 animate-slide-in-left">
+      <div class="p-6 pb-2 border-b border-white/5">
+        <div class="text-red-500 font-bold text-xs uppercase mb-1">3.0 CORE</div>
+        <h1 class="text-2xl font-semibold tracking-tight gradient-text mb-1">Rangonos AI</h1>
+        <p class="text-xs text-zinc-500 font-light">Managed by <span class="font-bold">Yuvraj Rangera</span></p>
+      </div>
+
+      <!-- New Chat Button -->
+      <div class="px-4 py-4">
+        <button (click)="createNewChat()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20 active:scale-95 duration-200">
+          <span class="material-symbols-rounded">add</span>
+          <span class="text-sm font-medium">New Chat</span>
+        </button>
+      </div>
+
+      <!-- Navigation / History List -->
+      <div class="flex-1 overflow-y-auto px-2 space-y-1">
+        <div class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-4 mb-2 mt-2">History</div>
+        
+        @for (session of sessions(); track session.id; let i = $index) {
+          <button 
+            (click)="switchChat(session.id)"
+            class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group text-sm text-left relative animate-slide-up"
+            [style.animation-delay]="(i * 50) + 'ms'"
+            [class.bg-white_5]="activeSessionId() === session.id && viewMode() === 'chat'"
+            [class.hover:bg-white_5]="activeSessionId() !== session.id"
+          >
+            <span class="material-symbols-rounded text-zinc-500 text-lg group-hover:text-indigo-400 transition-colors">chat_bubble_outline</span>
+            <div class="flex-1 truncate">
+              <span class="block truncate text-zinc-300 group-hover:text-white transition-colors" [class.font-medium]="activeSessionId() === session.id">{{ session.title }}</span>
+              <span class="block text-[10px] text-zinc-600">{{ formatDate(session.timestamp) }}</span>
+            </div>
+            
+            @if (activeSessionId() === session.id) {
+               <div class="absolute right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
+            }
+          </button>
+        } @empty {
+           <div class="px-4 py-8 text-center text-zinc-600 text-xs italic animate-fade-in">
+             No chat history yet.
+           </div>
+        }
+      </div>
+
+      <!-- Bottom Actions -->
+      <div class="p-3 border-t border-white/5 bg-black/20 space-y-1">
+        <button (click)="viewMode.set('profile')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm transition-colors group" [class.bg-white_5]="viewMode() === 'profile'" [class.text-indigo-300]="viewMode() === 'profile'">
+           <span class="material-symbols-rounded text-zinc-500 group-hover:text-indigo-400 transition-colors" [class.text-indigo-400]="viewMode() === 'profile'">person</span>
+           <span>Your Profile</span>
+        </button>
+
+        <div class="pt-2 mt-2 border-t border-white/5 flex items-center justify-between px-2">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center border border-white/10 text-xs font-bold text-white shadow-md transition-transform hover:scale-105" [ngClass]="authService.currentUser()?.avatarColor || 'bg-zinc-700'">
+              {{ getUserInitials() }}
+            </div>
+            <div class="flex flex-col">
+              <span class="text-xs font-medium text-zinc-200 max-w-[100px] truncate">{{ authService.currentUser()?.name }}</span>
+            </div>
+          </div>
+          <button (click)="logout()" class="text-zinc-500 hover:text-red-400 transition-colors p-1 rounded-md hover:bg-red-500/10" title="Sign Out">
+            <span class="material-symbols-rounded text-lg">logout</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 h-16 glass-panel z-50 flex items-center justify-between px-4 border-b border-white/5">
+      <div class="flex flex-col justify-center animate-fade-in">
+        <div class="text-red-500 font-bold text-[10px] uppercase">3.0 CORE</div>
+        <h1 class="text-lg font-bold gradient-text leading-tight">Rangonos AI</h1>
+        <p class="text-[10px] text-zinc-500 font-light">Managed by <span class="font-bold">Yuvraj Rangera</span></p>
+      </div>
+      <button (click)="toggleMobileMenu()" class="text-zinc-400 p-2 active:scale-90 transition-transform">
+        <span class="material-symbols-rounded">menu</span>
+      </button>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    @if (isMobileMenuOpen()) {
+      <div class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm md:hidden animate-fade-in" (click)="toggleMobileMenu()">
+        <div class="absolute right-0 top-0 bottom-0 w-72 glass-panel border-l border-white/10 flex flex-col animate-slide-in-left shadow-2xl" (click)="$event.stopPropagation()" style="animation-name: slideInRight; animation-direction: reverse;">
+           <style>
+             @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+           </style>
+           <div style="animation: slideInRight 0.3s cubic-bezier(0,0,0.2,1) forwards;" class="h-full flex flex-col">
+           
+             <div class="p-4 border-b border-white/5 flex items-center justify-between">
+               <span class="text-sm font-bold text-zinc-400">Menu</span>
+               <button (click)="toggleMobileMenu()" class="text-zinc-400 hover:text-white transition-colors">
+                <span class="material-symbols-rounded">close</span>
+              </button>
+             </div>
+             
+             <div class="p-4">
+               <button (click)="createNewChat(); toggleMobileMenu()" class="w-full bg-indigo-600 text-white p-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 active:scale-95 transition-all">
+                 <span class="material-symbols-rounded">add</span> New Chat
+               </button>
+             </div>
+
+             <div class="flex-1 overflow-y-auto px-2">
+                <div class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-4 mb-2">History</div>
+                 @for (session of sessions(); track session.id) {
+                  <button (click)="switchChat(session.id); toggleMobileMenu()" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-left truncate hover:bg-white/5 text-zinc-400 transition-colors animate-slide-up">
+                    <span class="material-symbols-rounded text-base">chat_bubble_outline</span>
+                    <span class="truncate">{{ session.title }}</span>
+                  </button>
+                 }
+             </div>
+
+             <div class="p-4 border-t border-white/5 space-y-2">
+               <button (click)="viewMode.set('profile'); toggleMobileMenu()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-zinc-400 transition-colors">
+                 <span class="material-symbols-rounded">person</span> Your Profile
+               </button>
+               <button (click)="logout()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 text-sm text-red-400 transition-colors">
+                 <span class="material-symbols-rounded">logout</span> Sign Out
+               </button>
+               
+               <!-- Mobile Footer -->
+               <div class="pt-4 mt-2 border-t border-white/5 text-center">
+                 <p class="text-[10px] text-zinc-600">Managed by <span class="font-bold">Yuvraj Rangera</span></p>
+               </div>
+             </div>
+           
+           </div>
+        </div>
+      </div>
+    }
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full relative pt-16 md:pt-0 bg-zinc-950">
+      
+      <!-- Decorative Background Glows -->
+      <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none animate-fade-in"></div>
+      <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-[100px] pointer-events-none animate-fade-in"></div>
+
+      @if (viewMode() === 'chat') {
+        <!-- Chat Area -->
+        <div #chatContainer class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 scroll-smooth">
+          @if (messages().length === 0) {
+            <div class="h-full flex flex-col items-center justify-center text-center opacity-0 animate-[fadeIn_1s_ease-out_forwards] animate-scale-in">
+              <div class="w-16 h-16 rounded-2xl bg-zinc-800 border border-white/5 mb-6 flex items-center justify-center shadow-2xl shadow-black">
+                <span class="material-symbols-rounded text-3xl text-zinc-400">chat</span>
+              </div>
+              <div class="text-red-500 font-bold text-xs uppercase mb-1">3.0 CORE</div>
+              <h2 class="text-2xl font-light mb-2 tracking-tight text-white">
+                Rangonos AI
+              </h2>
+              <p class="text-zinc-500 text-sm max-w-sm mx-auto leading-relaxed">
+                Start a new conversation. I can help with writing, analysis, and more.
+              </p>
+            </div>
+          } @else {
+            @for (msg of messages(); track msg.timestamp) {
+              <app-chat-bubble [message]="msg"></app-chat-bubble>
+            }
+          }
+          <div #scrollAnchor></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 md:p-6 pb-6 md:pb-8 z-10 animate-slide-up">
+          <div class="max-w-3xl mx-auto relative">
+            <div class="relative glass-panel rounded-2xl p-2 pl-4 flex items-end gap-2 shadow-2xl shadow-black/50 transition-all focus-within:ring-1 focus-within:ring-indigo-500/30">
+               <textarea 
+                #promptInput
+                rows="1"
+                class="w-full bg-transparent border-0 focus:ring-0 text-zinc-200 placeholder-zinc-500 resize-none py-3 min-h-[48px] max-h-32 text-base"
+                placeholder="Message Rangonos AI..."
+                (keydown.enter)="handleEnterKey($event, promptInput)"
+                (input)="autoResize(promptInput)"
+                [disabled]="isLoading()"
+               ></textarea>
+               
+               <button 
+                (click)="sendMessage(promptInput)"
+                [disabled]="isLoading() || !promptInput.value.trim()"
+                class="mb-1 p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 shadow-lg shadow-indigo-900/20 flex-shrink-0 hover:shadow-indigo-500/30"
+               >
+                @if (isLoading()) {
+                  <span class="material-symbols-rounded animate-spin text-lg">progress_activity</span>
+                } @else {
+                  <span class="material-symbols-rounded text-lg">arrow_upward</span>
+                }
+               </button>
+            </div>
+            <div class="text-center mt-3">
+              <p class="text-[10px] text-zinc-600">Rangonos AI can make mistakes. Managed by <span class="font-bold">Yuvraj Rangera</span>.</p>
+            </div>
+          </div>
+        </div>
+      } @else if (viewMode() === 'profile') {
+        <!-- Profile View -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 animate-scale-in flex items-center justify-center">
+          <div class="w-full max-w-lg glass-panel rounded-3xl p-8 border border-white/10 relative overflow-hidden shadow-2xl">
+              <!-- Glows -->
+              <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[60px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
+              <div class="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[60px] pointer-events-none translate-y-1/2 -translate-x-1/2"></div>
+
+              <!-- Back Button -->
+              <div class="absolute top-6 left-6 z-20">
+                  <button (click)="backToChat()" class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5" title="Back to Chat">
+                      <span class="material-symbols-rounded">arrow_back</span>
+                      <span class="text-sm font-medium">Back</span>
+                  </button>
+              </div>
+
+              <div class="relative z-10 pt-4">
+                <div class="flex flex-col items-center text-center">
+                   <!-- Profile Pic -->
+                   <div class="w-28 h-28 rounded-full flex items-center justify-center text-4xl font-bold text-white shadow-xl mb-6 border-4 border-zinc-900/50 ring-1 ring-white/10 transition-transform hover:scale-105" [ngClass]="authService.currentUser()?.avatarColor">
+                      {{ getUserInitials() }}
+                   </div>
+
+                   <!-- Info/Edit Forms -->
+                   <div class="w-full space-y-6 text-left">
+                     <!-- Name Edit -->
+                     <div class="space-y-2">
+                        <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Display Name</label>
+                        <div class="flex gap-2">
+                            <input type="text" [(ngModel)]="profileName" class="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 transition-all text-zinc-200 placeholder-zinc-700">
+                            <button (click)="updateProfileName()" class="px-4 py-2 bg-white/5 hover:bg-white/10 text-indigo-400 rounded-xl text-sm font-medium transition-colors border border-white/5 active:scale-95">
+                                Save
+                            </button>
+                        </div>
+                     </div>
+
+                     <!-- Email Read-only -->
+                     <div class="space-y-2">
+                        <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Email Address</label>
+                        <div class="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-zinc-500 cursor-not-allowed">
+                           {{ authService.currentUser()?.email }}
+                        </div>
+                     </div>
+
+                     <!-- Password Edit -->
+                     <div class="space-y-2 pt-4 border-t border-white/5">
+                        <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Change Password</label>
+                        <input type="password" [(ngModel)]="profilePassword" placeholder="New Password" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 transition-all text-zinc-200 placeholder-zinc-700 mb-2">
+                        <input type="password" [(ngModel)]="profileConfirmPassword" placeholder="Confirm Password" class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500/50 transition-all text-zinc-200 placeholder-zinc-700">
+                        <button (click)="updateProfilePassword()" [disabled]="!profilePassword" class="w-full mt-2 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-900/20 active:scale-95">
+                            Update Password
+                        </button>
+                     </div>
+                   </div>
+
+                   <!-- Feedback Message -->
+                   @if (profileMessage()) {
+                       <div class="w-full mt-4 p-3 rounded-xl text-xs font-medium text-center animate-fade-in" 
+                            [class.bg-emerald-500_10]="profileMessage()?.type === 'success'"
+                            [class.text-emerald-400]="profileMessage()?.type === 'success'"
+                            [class.bg-red-500_10]="profileMessage()?.type === 'error'"
+                            [class.text-red-400]="profileMessage()?.type === 'error'">
+                           {{ profileMessage()?.text }}
+                       </div>
+                   }
+                   
+                   <!-- Logout -->
+                   <div class="mt-8 w-full border-t border-white/5 pt-6">
+                     <button (click)="logout()" class="w-full py-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 text-sm font-medium active:scale-95">
+                       <span class="material-symbols-rounded">logout</span>
+                       Sign Out
+                     </button>
+                   </div>
+                   
+                   <div class="mt-6">
+                      <p class="text-[10px] text-zinc-600">Managed by <span class="font-bold">Yuvraj Rangera</span></p>
+                   </div>
+
+                </div>
+              </div>
+          </div>
+        </div>
+      }
+
+    </main>
+  </div>
+}
